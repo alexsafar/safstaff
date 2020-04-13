@@ -5,6 +5,7 @@
 #include <FastLED.h>
 #include "main.h"
 
+////////////////////////
 void setup() {
   Serial.begin(921600);
   Wire.begin(5,4); // tell the I2C library what pins we are using for SCL(serial clock) SDA(serial data)
@@ -17,23 +18,26 @@ void setup() {
   display.init(); // init OLED display
 }
 
+////////////////////////
 void loop() {
+  timer = millis();
   mpu6050.update();
   if (MENU_MODE){
     displayMenu();
     FastLED.delay(100);
+    resetVariables();
   }
   else {
     detectMenu();
     displayGyro();
     //all these menu options must loop in 100ms intervals - see within for details
-    if (MENU_OPTION==1){rainbowMode();}
+    if (MENU_OPTION==1){timeMode();} //rainbowMode
     else if (MENU_OPTION==2){twinkleMode();}
     else if (MENU_OPTION==3){blockMode();}
-  }
+  } 
 }
 
-
+////////////////////////
 void initialiseLedSet() {
   int setSize = NUM_LEDS / NUM_LED_SETS;
   for (int x=0;x<NUM_LED_SETS;x++)
@@ -44,7 +48,7 @@ void initialiseLedSet() {
   }
 }
 
-float initialMenuZ=0;
+////////////////////////
 void displayMenu() {
   display.clear();
   display.drawString(10, 0, "MENU");
@@ -66,7 +70,6 @@ void displayMenu() {
     MENU_OPTION=2;
     lastAccZtwink = mpu6050.getAccZ(); } //initiate zacc fo twink detecting change  
   //in the above we could go more advanced so each gradient applies centre out??
-
 
   //confirmation logic - flash every 8 iterations. if it stays the same for 5 flashes then break from menu
   if (bCount%bCountMax==0){
@@ -91,12 +94,13 @@ void displayMenu() {
   else {bBrightness=255;}
   bCount++;
 
-
 //note: need to make sure variuabkles set to base when menui activated??
   display.display();
 }
 
+////////////////////////
 void detectMenu() {
+  //called 10x per second
   iterCount++;
   //make sure the staff is upright to get into menu mode
   float sphAng = fabs(mpu6050.getAccZ()+0.1);
@@ -108,14 +112,17 @@ void detectMenu() {
   else if  ((zAng <lastZ-angTol) && (posRotation)) {switchCount++;  posRotation=false; iterCount=0;}
   lastZ=zAng;
 
+  //if we hit the required number of switches
   if (switchCount==requiredSwitches) {
-    MENU_MODE=true; iterCount=0; switchCount = 0; initialMenuZ = mpu6050.getGyroAngleZ(); //reset local variables
+    MENU_MODE=true; iterCount=0; switchCount = 0; //reset local variables
     bCount = 0; confirmCount = 0; menuCount = 0;}//initiailise menu variables
+
+  //timeout menu detection if no switches detected for a while
   if (iterCount>detectMenuTimeout) {iterCount=0; switchCount = 0;}
 }
 
 
-
+////////////////////////
 void displayGyro() {
   display.clear();
   String men = String(MENU_OPTION);
@@ -139,8 +146,44 @@ void displayGyro() {
   display.display();
 }
 
+////////////////////////
+//change colour as a function of time (for the first bit so they sync)
+//then change colour based on rotation speed, over a certain value
+uint8_t lastCol = 0;
+void timeMode(){
+  for (int x=0; x<2; x++){
+    loopNum++;
+    //for the first 5 seconds just change the colour based on time
+    if (loopNum<100) {
+      timer = millis();
+      uint8_t modTimer = map(timer,0,12800,0,255);
+      CHSV solidCol(modTimer,255,255);
+      leds.fill_solid(solidCol);
+      lastCol = modTimer;
+    }
+    //After 5s, increment colour based on rotation speed
+    else {
+      float gyroSpeed = fabs(fabs(lastGyroZ)- fabs(mpu6050.getGyroAngleZ()));
+      if (gyroSpeed>10){bMode_gyroCount++;}
+      else {bMode_gyroCount = 0; lastGyroZ = 0;}
 
+      if (bMode_gyroCount>bMode_gyroActivateCount) {
+        lastCol = lastCol + 4;
+        //lastCol = lastCol + floor((gyroSpeed/10)+baseIncrement);
+      }
+      else { 
+        lastCol = lastCol++;
+      }
 
+      CHSV solidCol(lastCol,255,255);
+      leds.fill_solid(solidCol);
+      lastGyroZ = (2*lastGyroZ+mpu6050.getGyroAngleZ())/3;
+    } 
+    FastLED.delay(50);
+  }
+}
+
+////////////////////////
 //fill the whole thing linearly with a ranbow
 //cycle rainbow forwards in colour
 void rainbowMode(){
@@ -151,6 +194,7 @@ void rainbowMode(){
   }
 }
 
+////////////////////////
 //turn random leds on and fade them out
 //colour based on position
 //sudden change in acceleration means all on at full brightness
@@ -198,12 +242,12 @@ void twinkleMode(){
   }
 }
 
-
+////////////////////////
 //block colour
 //strobe on lights in and out on each face - after rpm over <X< for Y seconds
 //colour based on position
 void blockMode(){
-  uint8_t symZcol = map(mpu6050.getGyroAngleX(),0,54  0,0,255);
+  uint8_t symZcol = map(mpu6050.getGyroAngleX(),0,540,0,255);
   uint8_t randcol = std::rand() % 255;
   CHSV colourS(symZcol,255,255);
   CHSV colourR(randcol,255,255);
@@ -229,7 +273,7 @@ void blockMode(){
   leds.fill_solid(CHSV(0,0,0));
 }
 
-
+////////////////////////
 void centre_out_dot(uint8_t y, CRGB color, uint32_t wait, bool first) {  //Note: y is ledarray number
   for (int b=0; b<NUM_LED_SETS;b++)
   {

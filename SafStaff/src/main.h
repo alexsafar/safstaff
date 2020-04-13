@@ -16,12 +16,11 @@ void displayLED();
 void detectMenu();
 void detectOff();
 
-void offMode();
+void timeMode();
 void rainbowMode();
 void twinkleMode();
 void blockMode();
 void centre_out_dot(uint8_t y, CRGB color, uint32_t wait, bool first) ;
-
 
 #define DATA_PIN    13
 #define LED_TYPE    WS2812B
@@ -38,9 +37,13 @@ CRGB rawleds[NUM_LEDS];
 CRGBSet leds(rawleds, NUM_LEDS);
 struct CRGB * ledarray[NUM_LED_SETS];
 uint8_t sizearray[NUM_LED_SETS];
+unsigned long timer;
 
 //offmode params
 float zInOffModePrevious = 0;
+
+//time mode params
+unsigned long loopNum = 0;
 
 //rainbow params
 uint8_t hue = 0;
@@ -78,7 +81,10 @@ int confirmCount = 0;
 int confirmOption = 1;
 uint8_t confirmBrightness = 255;
 
-
+void resetVariables() {
+    loopNum = 0;
+    lastGyroZ = 0;
+}
 
 
 
