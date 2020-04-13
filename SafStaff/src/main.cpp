@@ -26,9 +26,8 @@ void loop() {
   else {
     detectMenu();
     displayGyro();
-    if (MENU_OPTION==0){offMode();}
     //all these menu options must loop in 100ms intervals - see within for details
-    else if (MENU_OPTION==1){rainbowMode();}
+    if (MENU_OPTION==1){rainbowMode();}
     else if (MENU_OPTION==2){twinkleMode();}
     else if (MENU_OPTION==3){blockMode();}
   }
@@ -50,30 +49,19 @@ void displayMenu() {
   display.clear();
   display.drawString(10, 0, "MENU");
 
-  //Rotation to global brightness setting
-  int maxZ = 1080;
-  float absZ = abs(mpu6050.getGyroAngleZ()) - abs(initialMenuZ);
-  int flZ = int(floorf(absZ));
-  String zang = String(100*(flZ%maxZ)/1080);
-  display.drawString(10, 10, "brightness = " + zang + "%");
-
-  //brightness to be set!
-  // uint8_t global_bri = 255*(flZ%maxZ)/maxZ;
-  // FastLED.setBrightness(global_bri);
-
   //Spherical angle - use direction of gravity on Z
   float sphAng = fabs(mpu6050.getAccZ()+0.1);
   if (sphAng<0.3){
-    display.drawString(10, 30, "menu option = 3");
+    display.drawString(10, 30, "BLOCK");
     leds.fill_solid(CHSV(128,255,bBrightness));    //@@@@aqua to blue
     MENU_OPTION=3;   
     lastGyroZ = mpu6050.getGyroAngleZ(); }
   else if (sphAng>0.85) {
-    display.drawString(10, 30, "menu option = 1");
+    display.drawString(10, 30, "RAINBOW");
     leds.fill_solid(CHSV(32,255,bBrightness));    //red to @@@@orange
     MENU_OPTION=1;     }
   else {
-    display.drawString(10, 30, "menu option = 2");
+    display.drawString(10, 30, "TWINKLE");
     leds.fill_solid(CHSV(244,255,bBrightness));    //purple to @@@@pink
     MENU_OPTION=2;
     lastAccZtwink = mpu6050.getAccZ(); } //initiate zacc fo twink detecting change  
@@ -103,8 +91,6 @@ void displayMenu() {
   else {bBrightness=255;}
   bCount++;
 
-  //just in case we are turning off!
-  //detectOff();
 
 //note: need to make sure variuabkles set to base when menui activated??
   display.display();
@@ -112,6 +98,11 @@ void displayMenu() {
 
 void detectMenu() {
   iterCount++;
+  //make sure the staff is upright to get into menu mode
+  float sphAng = fabs(mpu6050.getAccZ()+0.1);
+  if (sphAng <0.75){switchCount=0; iterCount=0;}
+
+  //detect the changes in spin
   int zAng = mpu6050.getGyroAngleZ();
   if ((zAng >lastZ+angTol) && (!posRotation)) {switchCount++; posRotation=true; iterCount=0;}
   else if  ((zAng <lastZ-angTol) && (posRotation)) {switchCount++;  posRotation=false; iterCount=0;}
@@ -123,19 +114,7 @@ void detectMenu() {
   if (iterCount>detectMenuTimeout) {iterCount=0; switchCount = 0;}
 }
 
-void detectOff() {
-  iterCount++;
-  int zAng = mpu6050.getGyroAngleZ();
-  if ((zAng >lastZ+angTol) && (!posRotation)) {switchCount++; posRotation=true; iterCount=0;}
-  else if  ((zAng <lastZ-angTol) && (posRotation)) {switchCount++;  posRotation=false; iterCount=0;}
-  lastZ=zAng;
 
-  if (switchCount==requiredSwitches) {
-    leds.fill_solid(CRGB::Black); zInOffModePrevious = mpu6050.getGyroAngleZ(); MENU_OPTION=0; MENU_MODE=false; 
-    iterCount=0; switchCount = 0; //reset local variables
-    bCount = 0; confirmCount = 0; menuCount = 0;}//initiailise menu variables
-  if (iterCount>detectMenuTimeout) {iterCount=0; switchCount = 0;}
-}
 
 void displayGyro() {
   display.clear();
@@ -160,21 +139,7 @@ void displayGyro() {
   display.display();
 }
 
-//wake up into menu mode if 1080 degree (3 full spins) have happened in 4 seconds
-void offMode(){
-  FastLED.delay(4000); //search for wakeup every 4 seconds - if 3 rotations habe happened...
-  if (fabs(zInOffModePrevious - mpu6050.getGyroAngleZ())>1080){
-    MENU_MODE=true;
-    // for (int x=0;x<255;x++){
-    //   CRGB white(x,x,x);
-    //   leds.fill_solid(white);
-    //   FastLED.delay(16);
-    // }
-    // FastLED.delay(1000);
 
-  }
-  zInOffModePrevious = mpu6050.getGyroAngleZ();
-}
 
 //fill the whole thing linearly with a ranbow
 //cycle rainbow forwards in colour
@@ -238,7 +203,7 @@ void twinkleMode(){
 //strobe on lights in and out on each face - after rpm over <X< for Y seconds
 //colour based on position
 void blockMode(){
-  uint8_t symZcol = map(mpu6050.getGyroAngleX(),0,180,0,255);
+  uint8_t symZcol = map(mpu6050.getGyroAngleX(),0,54  0,0,255);
   uint8_t randcol = std::rand() % 255;
   CHSV colourS(symZcol,255,255);
   CHSV colourR(randcol,255,255);

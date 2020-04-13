@@ -56,7 +56,7 @@ float lastAccZtwink = 0;
 float lastGyroZ = 0;
 uint8_t bMode_cycleIter = 0; 
 int bMode_gyroCount = 0;
-int bMode_gyroActivateCount = 5;
+int bMode_gyroActivateCount = 20;
 
 //detect menu parameters
 bool MENU_MODE = false;
