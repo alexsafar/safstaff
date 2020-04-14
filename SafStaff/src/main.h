@@ -43,7 +43,8 @@ unsigned long timer;
 float zInOffModePrevious = 0;
 
 //time mode params
-unsigned long loopNum = 0;
+int tMode_gyroCount = 0;
+int tMode_gyroActivateCount = 60;
 
 //rainbow params
 uint8_t hue = 0;
@@ -82,7 +83,6 @@ int confirmOption = 1;
 uint8_t confirmBrightness = 255;
 
 void resetVariables() {
-    loopNum = 0;
     lastGyroZ = 0;
 }
 

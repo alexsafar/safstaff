@@ -102,9 +102,9 @@ void displayMenu() {
 void detectMenu() {
   //called 10x per second
   iterCount++;
-  //make sure the staff is upright to get into menu mode
+  //make sure the staff is horizontal to get into menu mode
   float sphAng = fabs(mpu6050.getAccZ()+0.1);
-  if (sphAng <0.75){switchCount=0; iterCount=0;}
+  if (sphAng >0.3){switchCount=0; iterCount=0;}
 
   //detect the changes in spin
   int zAng = mpu6050.getGyroAngleZ();
@@ -149,36 +149,20 @@ void displayGyro() {
 ////////////////////////
 //change colour as a function of time (for the first bit so they sync)
 //then change colour based on rotation speed, over a certain value
-uint8_t lastCol = 0;
+uint8_t modTimer = 0;
 void timeMode(){
   for (int x=0; x<2; x++){
-    loopNum++;
-    //for the first 5 seconds just change the colour based on time
-    if (loopNum<100) {
-      timer = millis();
-      uint8_t modTimer = map(timer,0,12800,0,255);
-      CHSV solidCol(modTimer,255,255);
-      leds.fill_solid(solidCol);
-      lastCol = modTimer;
-    }
-    //After 5s, increment colour based on rotation speed
-    else {
-      float gyroSpeed = fabs(fabs(lastGyroZ)- fabs(mpu6050.getGyroAngleZ()));
-      if (gyroSpeed>10){bMode_gyroCount++;}
-      else {bMode_gyroCount = 0; lastGyroZ = 0;}
+    timer = millis();
+    float gyroSpeed = fabs(lastGyroZ - mpu6050.getGyroAngleZ());
+    if (gyroSpeed>20){tMode_gyroCount++;}
+    else {tMode_gyroCount = 0;}
 
-      if (bMode_gyroCount>bMode_gyroActivateCount) {
-        lastCol = lastCol + 4;
-        //lastCol = lastCol + floor((gyroSpeed/10)+baseIncrement);
-      }
-      else { 
-        lastCol = lastCol++;
-      }
+    if (tMode_gyroCount>tMode_gyroActivateCount) {modTimer = map(timer,0,3200,0,255);}
+    else {modTimer = map(timer,0,12800,0,255);}
 
-      CHSV solidCol(lastCol,255,255);
-      leds.fill_solid(solidCol);
-      lastGyroZ = (2*lastGyroZ+mpu6050.getGyroAngleZ())/3;
-    } 
+    CHSV solidCol(modTimer,255,255);
+    leds.fill_solid(solidCol);
+    lastGyroZ = (2*lastGyroZ+mpu6050.getGyroAngleZ())/3;
     FastLED.delay(50);
   }
 }
