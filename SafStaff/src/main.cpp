@@ -31,9 +31,9 @@ void loop() {
     detectMenu();
     displayGyro();
     //all these menu options must loop in 100ms intervals - see within for details
-    if (MENU_OPTION==1){timeMode();} //rainbowMode
-    else if (MENU_OPTION==2){twinkleMode();}
-    else if (MENU_OPTION==3){blockMode();}
+    if (MENU_OPTION==1){twinkleMode();}
+    else if (MENU_OPTION==2){timeMode();}
+    else if (MENU_OPTION==3){rainbowMode();}
   } 
 }
 
@@ -173,7 +173,7 @@ void twinkleMode(){
     if (numLEDsOn<NUM_LEDS-1){ 
       // if there's a sudden change in acceleration, turn on all LEDS
       if (fabs(lastAccZtwink - mpu6050.getAccZ())>0.6 ){
-        int coloursetforall = std::rand()%255; 
+        int coloursetforall = map(timer,0,12800,0,255); //std::rand()%255; 
         CHSV colour(coloursetforall, 255, 255);
         for (int a = 0; a<NUM_LEDS;a++){
           onOffArr[a]=1;
@@ -210,7 +210,7 @@ void twinkleMode(){
 
 ////////////////////////
 //change colour as a function of time (for the first bit so they sync)
-//then change colour based on rotation speed, over a certain value
+//then strobe colours in dragon mode (col based on time)
 float avgSpeed = 0;
 void timeMode(){
   for (int x=0; x<2; x++){
@@ -218,21 +218,30 @@ void timeMode(){
     float gyroSpeed = fabs(lastGyroZ - mpu6050.getGyroAngleZ());
 
     if (gyroSpeed>20){tMode_gyroCount1++;}
-    else {tMode_gyroCount1 = 0;}
+    else {tMode_gyroCount1 = 0; bMode_cycleIter=0;}
 
+    //normally 120, but 30 for testing
     if (tMode_gyroCount1>120) {
-      leds.fill_solid(CHSV(map(timer,0,3200,0,255),255,255));}
+      int a = bMode_cycleIter%NUM_LED_IN_SET;
+      CHSV colourCycle(map(timer,0,3200,0,255),255,255);
+      if(int(floor(bMode_cycleIter/NUM_LED_IN_SET))%2==0){centre_out_dot(a, colourCycle, 100, true);}
+      else {centre_out_dot(a, colourCycle, 100, false);}
+      bMode_cycleIter++;
+      FastLED.delay(50);
+      leds.fill_solid(CHSV(0,0,0));
+    }
     else {
-      leds.fill_solid(CHSV(map(timer,0,12800,0,255),255,255));}
+      leds.fill_solid(CHSV(map(timer,0,12800,0,255),255,255));
+      FastLED.delay(50);
+    }
   
     lastGyroZ = ((2*lastGyroZ)+mpu6050.getGyroAngleZ())/3;
-    avgSpeed = ((2*avgSpeed)+gyroSpeed)/3;
-    FastLED.delay(50);
+    //avgSpeed = ((2*avgSpeed)+gyroSpeed)/3;
   }
 }
 
 ////////////////////////
-//block colour
+//DEPRICATED block colour
 //strobe on lights in and out on each face - after rpm over <X< for Y seconds
 //colour based on position
 void blockMode(){
