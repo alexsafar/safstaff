@@ -100,7 +100,7 @@ void displayMenu() {
 
 ////////////////////////
 void detectMenu() {
-  //called 10x per second
+  //called 10x per secondq
   iterCount++;
   //make sure the staff is horizontal to get into menu mode
   float sphAng = fabs(mpu6050.getAccZ()+0.1);
@@ -146,26 +146,7 @@ void displayGyro() {
   display.display();
 }
 
-////////////////////////
-//change colour as a function of time (for the first bit so they sync)
-//then change colour based on rotation speed, over a certain value
-uint8_t modTimer = 0;
-void timeMode(){
-  for (int x=0; x<2; x++){
-    timer = millis();
-    float gyroSpeed = fabs(lastGyroZ - mpu6050.getGyroAngleZ());
-    if (gyroSpeed>20){tMode_gyroCount++;}
-    else {tMode_gyroCount = 0;}
 
-    if (tMode_gyroCount>tMode_gyroActivateCount) {modTimer = map(timer,0,3200,0,255);}
-    else {modTimer = map(timer,0,12800,0,255);}
-
-    CHSV solidCol(modTimer,255,255);
-    leds.fill_solid(solidCol);
-    lastGyroZ = (2*lastGyroZ+mpu6050.getGyroAngleZ())/3;
-    FastLED.delay(50);
-  }
-}
 
 ////////////////////////
 //fill the whole thing linearly with a ranbow
@@ -223,6 +204,30 @@ void twinkleMode(){
     lastAccZtwink = (2*lastAccZtwink + mpu6050.getAccZ())/3; //apply some low pass filter as we're recalculating every 0.1s
 
     FastLED.delay(20);
+  }
+}
+
+
+////////////////////////
+//change colour as a function of time (for the first bit so they sync)
+//then change colour based on rotation speed, over a certain value
+float avgSpeed = 0;
+void timeMode(){
+  for (int x=0; x<2; x++){
+    timer = millis();
+    float gyroSpeed = fabs(lastGyroZ - mpu6050.getGyroAngleZ());
+
+    if (gyroSpeed>20){tMode_gyroCount1++;}
+    else {tMode_gyroCount1 = 0;}
+
+    if (tMode_gyroCount1>120) {
+      leds.fill_solid(CHSV(map(timer,0,3200,0,255),255,255));}
+    else {
+      leds.fill_solid(CHSV(map(timer,0,12800,0,255),255,255));}
+  
+    lastGyroZ = ((2*lastGyroZ)+mpu6050.getGyroAngleZ())/3;
+    avgSpeed = ((2*avgSpeed)+gyroSpeed)/3;
+    FastLED.delay(50);
   }
 }
 

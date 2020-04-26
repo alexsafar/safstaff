@@ -43,8 +43,11 @@ unsigned long timer;
 float zInOffModePrevious = 0;
 
 //time mode params
-int tMode_gyroCount = 0;
-int tMode_gyroActivateCount = 60;
+int tMode_gyroCount1 = 0;
+int tMode_gyroCount2 = 0;
+int tMode_gyroMiss1 = 0;
+int tMode_gyroMiss2 = 0;
+int tMode_gyroActivateCount = 120;
 
 //rainbow params
 uint8_t hue = 0;
