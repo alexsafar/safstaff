@@ -86,7 +86,9 @@ int confirmOption = 1;
 uint8_t confirmBrightness = 255;
 
 void resetVariables() {
-    lastGyroZ = 0;
+    //lastGyroZ = 0;
+    lastGyroZ = mpu6050.getGyroAngleZ();
+    leds.fill_solid(CHSV(0,0,0));
 }
 
 

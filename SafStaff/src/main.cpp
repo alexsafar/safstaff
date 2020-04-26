@@ -22,19 +22,18 @@ void setup() {
 void loop() {
   timer = millis();
   mpu6050.update();
+
+  detectMenu();
   if (MENU_MODE){
     displayMenu();
-    FastLED.delay(100);
-    resetVariables();
   }
-  else {
-    detectMenu();
-    displayGyro();
-    //all these menu options must loop in 100ms intervals - see within for details
-    if (MENU_OPTION==1){twinkleMode();}
-    else if (MENU_OPTION==2){timeMode();}
-    else if (MENU_OPTION==3){rainbowMode();}
-  } 
+  
+  displayGyro();
+  //all these menu options must loop in 100ms intervals - see within for details
+  if (MENU_OPTION==1){twinkleMode();}
+  else if (MENU_OPTION==2){timeMode();}
+  else if (MENU_OPTION==3){rainbowMode();}
+  
 }
 
 ////////////////////////
@@ -56,42 +55,44 @@ void displayMenu() {
   //Spherical angle - use direction of gravity on Z
   float sphAng = fabs(mpu6050.getAccZ()+0.1);
   if (sphAng<0.3){
-    display.drawString(10, 30, "BLOCK");
-    leds.fill_solid(CHSV(128,255,bBrightness));    //@@@@aqua to blue
+    //display.drawString(10, 30, "BLOCK");
+    //leds.fill_solid(CHSV(128,255,bBrightness));    //@@@@aqua to blue
+    if (MENU_OPTION!=3){resetVariables();}
     MENU_OPTION=3;   
-    lastGyroZ = mpu6050.getGyroAngleZ(); }
+    }
   else if (sphAng>0.85) {
-    display.drawString(10, 30, "RAINBOW");
-    leds.fill_solid(CHSV(32,255,bBrightness));    //red to @@@@orange
+    //display.drawString(10, 30, "RAINBOW");
+    //leds.fill_solid(CHSV(32,255,bBrightness));    //red to @@@@orange
+    if (MENU_OPTION!=1){resetVariables();}
     MENU_OPTION=1;     }
   else {
-    display.drawString(10, 30, "TWINKLE");
-    leds.fill_solid(CHSV(244,255,bBrightness));    //purple to @@@@pink
+    //display.drawString(10, 30, "TWINKLE");
+    //leds.fill_solid(CHSV(244,255,bBrightness));    //purple to @@@@pink
     MENU_OPTION=2;
     lastAccZtwink = mpu6050.getAccZ(); } //initiate zacc fo twink detecting change  
   //in the above we could go more advanced so each gradient applies centre out??
 
   //confirmation logic - flash every 8 iterations. if it stays the same for 5 flashes then break from menu
-  if (bCount%bCountMax==0){
-    bBrightness=0;
+  if (bCount%bCountMax==0 && timer>16000){
 
-    if (confirmOption==MENU_OPTION )  { confirmCount++;} //&& abs(confirmBrightness-global_bri)<30) 
+    if (confirmOption==MENU_OPTION )  { 
+      confirmCount++;
+      leds.fill_solid(CHSV(0,0,0));
+      FastLED.delay(100);
+      } 
     else {
       confirmCount=0;
       confirmOption=MENU_OPTION;  //set variables for next loop
-      //confirmBrightness = global_bri;
     }
 
     for (int x=0;x<confirmCount;x++){ //draw on screen what confirmation count we are on
       display.drawString(10+(5*x), 50, "X");
     }
     
-    if (confirmCount ==5) { 
+    if (confirmCount ==4) { 
       MENU_MODE = false; iterCount=0; switchCount = 0; //reset 'detect off count' so can be reused for 'detect menu count'
-      leds.fill_solid(CHSV(0,0,0));
     } 
   }
-  else {bBrightness=255;}
   bCount++;
 
 //note: need to make sure variuabkles set to base when menui activated??
@@ -100,6 +101,12 @@ void displayMenu() {
 
 ////////////////////////
 void detectMenu() {
+
+  if (timer <16000) {
+    MENU_MODE=true;
+    return;
+  }
+  
   //called 10x per secondq
   iterCount++;
   //make sure the staff is horizontal to get into menu mode
@@ -172,7 +179,7 @@ void twinkleMode(){
     //if theyre not all on already then choose how to turn on
     if (numLEDsOn<NUM_LEDS-1){ 
       // if there's a sudden change in acceleration, turn on all LEDS
-      if (fabs(lastAccZtwink - mpu6050.getAccZ())>0.6 ){
+      if (fabs(lastAccZtwink - mpu6050.getAccZ())>0.6 && !MENU_MODE){
         int coloursetforall = map(timer,0,12800,0,255); //std::rand()%255; 
         CHSV colour(coloursetforall, 255, 255);
         for (int a = 0; a<NUM_LEDS;a++){
@@ -211,7 +218,7 @@ void twinkleMode(){
 ////////////////////////
 //change colour as a function of time (for the first bit so they sync)
 //then strobe colours in dragon mode (col based on time)
-float avgSpeed = 0;
+//float avgSpeed = 0;
 void timeMode(){
   for (int x=0; x<2; x++){
     timer = millis();
@@ -221,7 +228,7 @@ void timeMode(){
     else {tMode_gyroCount1 = 0; bMode_cycleIter=0;}
 
     //normally 120, but 30 for testing
-    if (tMode_gyroCount1>120) {
+    if (tMode_gyroCount1>120 && !MENU_MODE) {
       int a = bMode_cycleIter%NUM_LED_IN_SET;
       CHSV colourCycle(map(timer,0,3200,0,255),255,255);
       if(int(floor(bMode_cycleIter/NUM_LED_IN_SET))%2==0){centre_out_dot(a, colourCycle, 100, true);}
@@ -241,7 +248,8 @@ void timeMode(){
 }
 
 ////////////////////////
-//DEPRICATED block colour
+//DEPRICATED
+//block colour
 //strobe on lights in and out on each face - after rpm over <X< for Y seconds
 //colour based on position
 void blockMode(){
