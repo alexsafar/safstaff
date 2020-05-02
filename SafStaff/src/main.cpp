@@ -49,8 +49,8 @@ void initialiseLedSet() {
 
 ////////////////////////
 void displayMenu() {
-  display.clear();
-  display.drawString(10, 0, "MENU");
+  //display.clear();
+  //display.drawString(10, 0, "MENU");
 
   //Spherical angle - use direction of gravity on Z
   float sphAng = fabs(mpu6050.getAccZ()+0.1);
@@ -83,6 +83,7 @@ void displayMenu() {
     else {
       confirmCount=0;
       confirmOption=MENU_OPTION;  //set variables for next loop
+      display.clear();
     }
 
     for (int x=0;x<confirmCount;x++){ //draw on screen what confirmation count we are on
@@ -91,6 +92,7 @@ void displayMenu() {
     
     if (confirmCount ==4) { 
       MENU_MODE = false; iterCount=0; switchCount = 0; //reset 'detect off count' so can be reused for 'detect menu count'
+      display.clear();
     } 
   }
   bCount++;
