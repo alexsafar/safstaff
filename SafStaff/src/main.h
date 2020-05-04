@@ -60,7 +60,6 @@ int colourArr [NUM_LEDS] = {};
 float lastAccZtwink = 0;
 
 //blockmode params
-float lastGyroZ = 0;
 uint8_t bMode_cycleIter = 0; 
 int bMode_gyroCount = 0;
 int bMode_gyroActivateCount = 20;
@@ -85,8 +84,15 @@ int confirmCount = 0;
 int confirmOption = 1;
 uint8_t confirmBrightness = 255;
 
+
+float lastGyroX = 0;
+float lastGyroY = 0;
+float lastGyroZ = 0;
+
 void resetVariables() {
     //lastGyroZ = 0;
+    lastGyroX = mpu6050.getGyroAngleX();
+    lastGyroY = mpu6050.getGyroAngleY();
     lastGyroZ = mpu6050.getGyroAngleZ();
     leds.fill_solid(CHSV(0,0,0));
 }

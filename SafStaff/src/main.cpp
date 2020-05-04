@@ -68,6 +68,7 @@ void displayMenu() {
   else {
     //display.drawString(10, 30, "TWINKLE");
     //leds.fill_solid(CHSV(244,255,bBrightness));    //purple to @@@@pink
+    if (MENU_OPTION!=2){resetVariables();}
     MENU_OPTION=2;
     lastAccZtwink = mpu6050.getAccZ(); } //initiate zacc fo twink detecting change  
   //in the above we could go more advanced so each gradient applies centre out??
@@ -178,10 +179,27 @@ void twinkleMode(){
     int numLEDsOn = 0;
     for (int i=0;i<NUM_LEDS;i++)  {numLEDsOn+=onOffArr[i];} 
 
+    //in two scenarios, we put all the lights on
+    float gyroSpeedZ = fabs(lastGyroZ - mpu6050.getGyroAngleZ());
+    float gyroSpeedAll = fabs(lastGyroX - mpu6050.getGyroAngleX()) + fabs(lastGyroX - mpu6050.getGyroAngleX()) + gyroSpeedZ;
+    lastGyroX = ((2*lastGyroX)+mpu6050.getGyroAngleX())/3;  
+    lastGyroY = ((2*lastGyroY)+mpu6050.getGyroAngleY())/3;
+    lastGyroZ = ((2*lastGyroZ)+mpu6050.getGyroAngleZ())/3;
+    bool allLightsActiv = false;
+    //if acc changes AND there is no rotation
+    if (fabs(lastAccZtwink - mpu6050.getAccZ())>0.6 && gyroSpeedAll<10)
+    { allLightsActiv = true;}
+    //if spinning stops suddenly
+    if (gyroSpeedZ>10){tMode_gyroCount1++;}
+    else 
+    { if (tMode_gyroCount1>100){allLightsActiv = true;}
+      tMode_gyroCount1 = 0; 
+    }
+
     //if theyre not all on already then choose how to turn on
     if (numLEDsOn<NUM_LEDS-1){ 
       // if there's a sudden change in acceleration, turn on all LEDS
-      if (fabs(lastAccZtwink - mpu6050.getAccZ())>0.6 && !MENU_MODE){
+      if (allLightsActiv && !MENU_MODE){
         int coloursetforall = map(timer,0,12800,0,255); //std::rand()%255; 
         CHSV colour(coloursetforall, 255, 255);
         for (int a = 0; a<NUM_LEDS;a++){
@@ -210,8 +228,7 @@ void twinkleMode(){
         if (brightArr[a]<30)  {onOffArr[a]=0; colourArr[a]=0; brightArr[a]=0; leds[a]=CRGB::Black;}
       }
     }
-    lastAccZtwink = (2*lastAccZtwink + mpu6050.getAccZ())/3; //apply some low pass filter as we're recalculating every 0.1s
-
+    lastAccZtwink = (2*lastAccZtwink + mpu6050.getAccZ())/3; //apply some low pass filter as we're recalculating every 0.1s  
     FastLED.delay(20);
   }
 }
@@ -299,3 +316,52 @@ void centre_out_dot(uint8_t y, CRGB color, uint32_t wait, bool first) {  //Note:
     }
   }
 }  
+
+
+////////////////////////
+//DEPRICATED::turn random leds on and fade them out
+//colour based on position
+//sudden change in acceleration means all on at full brightness
+void twinkleMode_old(){
+  for (int x=0;x<5;x++){
+    //count how many leds are on so we dont get stuck in a loop finding one thats off
+    int numLEDsOn = 0;
+    for (int i=0;i<NUM_LEDS;i++)  {numLEDsOn+=onOffArr[i];} 
+
+    //if theyre not all on already then choose how to turn on
+    if (numLEDsOn<NUM_LEDS-1){ 
+      // if there's a sudden change in acceleration, turn on all LEDS
+      if (fabs(lastAccZtwink - mpu6050.getAccZ())>0.6 && !MENU_MODE){
+        int coloursetforall = map(timer,0,12800,0,255); //std::rand()%255; 
+        CHSV colour(coloursetforall, 255, 255);
+        for (int a = 0; a<NUM_LEDS;a++){
+          onOffArr[a]=1;
+          colourArr[a] = coloursetforall; 
+          brightArr[a] = 255; 
+        }
+      }
+      else { //choose a random one to turn on
+        int newLED = std::rand() % NUM_LEDS;
+        while (onOffArr[newLED]==1){  
+          newLED = std::rand() % NUM_LEDS;
+        }
+        onOffArr[newLED]=1;
+        colourArr[newLED] = std::rand() % 255; //give it a colour based on z
+        brightArr[newLED] = 255;
+      }
+    }
+
+    //cycle through all leds, making each darker and turn off the darkest ones
+    for (int a = 0; a<NUM_LEDS;a++){  
+      if (onOffArr[a]==1){
+        CHSV colour(colourArr[a], 255, brightArr[a]);
+        leds[a]=colour;
+        brightArr[a] = brightArr[a] - 2;
+        if (brightArr[a]<30)  {onOffArr[a]=0; colourArr[a]=0; brightArr[a]=0; leds[a]=CRGB::Black;}
+      }
+    }
+    lastAccZtwink = (2*lastAccZtwink + mpu6050.getAccZ())/3; //apply some low pass filter as we're recalculating every 0.1s
+
+    FastLED.delay(20);
+  }
+}
