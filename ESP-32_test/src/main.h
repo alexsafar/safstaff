@@ -29,7 +29,7 @@ void centre_out_dot(uint8_t y, CRGB color, uint32_t wait, bool first) ;
 #define NUM_LEDS    192
 #define NUM_LED_SETS 48
 #define NUM_LED_IN_SET 4 ///must be leds/sets
-#define BRIGHTNESS  50
+#define BRIGHTNESS  5
 #define FRAMES_PER_SECOND 120
 
 MPU6050 mpu6050(Wire);  // create gyro object

@@ -53,7 +53,7 @@ void displayMenu() {
   //display.drawString(10, 0, "MENU");
 
   //Spherical angle - use direction of gravity on Z
-  float sphAng = fabs(mpu6050.getAccZ()+0.1);
+  float sphAng = fabs(mpu6050.getAccZ()+0.05);
   if (sphAng<0.3){
     //display.drawString(10, 30, "BLOCK");
     //leds.fill_solid(CHSV(128,255,bBrightness));    //@@@@aqua to blue
@@ -113,8 +113,8 @@ void detectMenu() {
   //called 10x per secondq
   iterCount++;
   //make sure the staff is horizontal to get into menu mode
-  float sphAng = fabs(mpu6050.getAccZ()+0.1);
-  if (sphAng >0.3){switchCount=0; iterCount=0;}
+  float sphAng = fabs(mpu6050.getAccZ()+0.05);
+  if (sphAng >0.45){switchCount=0; iterCount=0;}
 
   //detect the changes in spin
   int zAng = mpu6050.getGyroAngleZ();
@@ -175,31 +175,30 @@ void rainbowMode(){
 //sudden change in acceleration means all on at full brightness
 void twinkleMode(){
   for (int x=0;x<5;x++){
+    gyro_calcs gyro_info = updateGyro();
     //count how many leds are on so we dont get stuck in a loop finding one thats off
     int numLEDsOn = 0;
     for (int i=0;i<NUM_LEDS;i++)  {numLEDsOn+=onOffArr[i];} 
 
     //in two scenarios, we put all the lights on
-    float gyroSpeedZ = fabs(lastGyroZ - mpu6050.getGyroAngleZ());
-    float gyroSpeedAll = fabs(lastGyroX - mpu6050.getGyroAngleX()) + fabs(lastGyroX - mpu6050.getGyroAngleX()) + gyroSpeedZ;
-    lastGyroX = ((2*lastGyroX)+mpu6050.getGyroAngleX())/3;  
-    lastGyroY = ((2*lastGyroY)+mpu6050.getGyroAngleY())/3;
-    lastGyroZ = ((2*lastGyroZ)+mpu6050.getGyroAngleZ())/3;
     bool allLightsActiv = false;
-    //if acc changes AND there is no rotation
-    if (fabs(lastAccZtwink - mpu6050.getAccZ())>0.6 && gyroSpeedAll<10)
-    { allLightsActiv = true;}
-    //if spinning stops suddenly
-    if (gyroSpeedZ>10){tMode_gyroCount1++;}
-    else 
-    { if (tMode_gyroCount1>100){allLightsActiv = true;}
-      tMode_gyroCount1 = 0; 
+    if (!MENU_MODE)
+    {
+      //if acc changes AND there is no rotation
+      if (gyro_info.rangeZacc>1 && gyro_info.currentXYZSpeed<10)
+      { allLightsActiv = true;}
+      //if spinning stops suddenly
+      if (gyro_info.currentZSpeed>10){tMode_gyroCount1++;}
+      else { 
+        if (tMode_gyroCount1>100){allLightsActiv = true;}
+        tMode_gyroCount1 = 0; 
+      }
     }
 
     //if theyre not all on already then choose how to turn on
     if (numLEDsOn<NUM_LEDS-1){ 
       // if there's a sudden change in acceleration, turn on all LEDS
-      if (allLightsActiv && !MENU_MODE){
+      if (allLightsActiv){
         int coloursetforall = map(timer,0,12800,0,255); //std::rand()%255; 
         CHSV colour(coloursetforall, 255, 255);
         for (int a = 0; a<NUM_LEDS;a++){
@@ -228,7 +227,6 @@ void twinkleMode(){
         if (brightArr[a]<30)  {onOffArr[a]=0; colourArr[a]=0; brightArr[a]=0; leds[a]=CRGB::Black;}
       }
     }
-    lastAccZtwink = (2*lastAccZtwink + mpu6050.getAccZ())/3; //apply some low pass filter as we're recalculating every 0.1s  
     FastLED.delay(20);
   }
 }
