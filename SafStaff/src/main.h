@@ -7,14 +7,16 @@
 #include <sstream>
 #include <iostream>
 #include <list>
+#include "gyr.h"
 
-using namespace std;
 
 void initialiseLedSet();
 
 void displayGyro();
 void displayMenu();
 void displayLED();
+
+void updateGyro();
 
 void detectMenu();
 void detectOff();
@@ -31,7 +33,7 @@ void centre_out_dot(uint8_t y, CRGB color, uint32_t wait, bool first) ;
 #define NUM_LEDS    192
 #define NUM_LED_SETS 48
 #define NUM_LED_IN_SET 4 ///must be leds/sets
-#define BRIGHTNESS  5
+#define BRIGHTNESS  100
 #define FRAMES_PER_SECOND 120
 
 MPU6050 mpu6050(Wire);  // create gyro object
@@ -41,6 +43,8 @@ CRGBSet leds(rawleds, NUM_LEDS);
 struct CRGB * ledarray[NUM_LED_SETS];
 uint8_t sizearray[NUM_LED_SETS];
 unsigned long timer;
+
+Gyro gy;
 
 //offmode params
 float zInOffModePrevious = 0;
@@ -102,95 +106,3 @@ void resetVariables() {
 
 
 
-struct gyro_t_pt
-{
-    float angleX;
-    float angleY;
-    float angleZ;
-    float accX;
-    float accY;
-    float accZ;
-};
-
-list<gyro_t_pt> gyroHistory;
-
-struct gyro_calcs
-{
-    //avg values over history buffer
-    float averageXAcc;
-    float averageYAcc;
-    float averageZAcc;
-
-    float currentXSpeed;
-    float currentYSpeed;
-    float currentZSpeed;
-    float currentXYZSpeed;
-    
-    float maxZAcc = -100;
-    float minZAcc = 100;
-    float rangeZacc;
-};
-
-gyro_calcs updateGyroCals()
-{
-    gyro_calcs currentCalc;
-    //return empty object if history is too short
-    if (gyroHistory.size()<9){return currentCalc;}
-
-    float avgXAcc = 0;
-    float avgYAcc = 0;
-    float avgZAcc = 0;
-
-    float minXAngle = 1e16;
-    float minYAngle = 1e16;
-    float minZAngle = 1e16;
-    float maxXAngle = -1e16;
-    float maxYAngle = -1e16;
-    float maxZAngle = -1e16;
-
-    int loopNum = 0;
-    int onlyFirstNum = 5;
-    std::list<gyro_t_pt>::iterator it;
-    for (it = gyroHistory.begin(); it != gyroHistory.end(); it++)
-    {
-        //if we onlt care for the n most recent values
-        if (loopNum<onlyFirstNum) 
-        {
-            if (minXAngle > it->angleX){minXAngle = it->angleX;}
-            if (maxXAngle < it->angleX){maxXAngle = it->angleX;}            
-            if (minYAngle > it->angleY){minYAngle = it->angleY;}
-            if (maxYAngle < it->angleY){maxYAngle = it->angleY;}            
-            if (minZAngle > it->angleZ){minZAngle = it->angleZ;}
-            if (maxZAngle < it->angleZ){maxZAngle = it->angleZ;}
-            
-            if (currentCalc.maxZAcc < it->accZ){currentCalc.maxZAcc = it->accZ;}
-            if (currentCalc.minZAcc > it->accZ){currentCalc.minZAcc = it->accZ;}
-        }
-
-        avgXAcc += it->accX;
-        avgYAcc += it->accY;
-        avgZAcc += it->accZ;
-             
-        //add lots of other calcs!!!!
-    }
-    currentCalc.averageXAcc = avgXAcc/(gyroHistory.size());
-    currentCalc.averageYAcc = avgYAcc/(gyroHistory.size());
-    currentCalc.averageZAcc = avgZAcc/(gyroHistory.size());
-    currentCalc.rangeZacc = currentCalc.maxZAcc - currentCalc.minZAcc;
-
-    currentCalc.currentXSpeed = maxXAngle - minXAngle;
-    currentCalc.currentYSpeed = maxYAngle - minYAngle;
-    currentCalc.currentZSpeed = maxZAngle - minZAngle;
- 
-    currentCalc.currentXYZSpeed = currentCalc.currentXSpeed + currentCalc.currentYSpeed + currentCalc.currentZSpeed;
-
-    return currentCalc;
-}
-
-gyro_calcs updateGyro() {
-    mpu6050.update();
-    gyro_t_pt currentGyro{mpu6050.getGyroAngleX(), mpu6050.getGyroAngleY(),mpu6050.getGyroAngleZ(),mpu6050.getAccX(),mpu6050.getAccY(),mpu6050.getAccZ()};
-    gyroHistory.push_front(currentGyro);
-    if (gyroHistory.size()>10){gyroHistory.pop_back();}
-    return updateGyroCals();
-}
