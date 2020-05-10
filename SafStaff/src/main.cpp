@@ -26,17 +26,26 @@ void setup() {
 ////////////////////////
 void loop() {
   timer = millis();
-  detectMenu();
-  if (MENU_MODE){
-    displayMenu();
+  if (false){
+    twinkleMode();
+    if (gy.getCalcs().rangeZacc > 1){
+      Serial.println(gy.display());
+    }
   }
-  
-  displayGyro();
-  //all these menu options must loop in 100ms intervals - see within for details
-  if (MENU_OPTION==1){twinkleMode();}
-  else if (MENU_OPTION==2){timeMode();}
-  else if (MENU_OPTION==3){rainbowMode();}
-  
+  else {
+    detectMenu();
+    if (MENU_MODE){
+      displayMenu();
+    }
+    
+    displayGyro();
+    //all these menu options must loop in 100ms intervals - see within for details
+    if (MENU_OPTION==1){twinkleMode();}
+    else if (MENU_OPTION==2){timeMode();}
+    else if (MENU_OPTION==3){rainbowMode();}
+    
+  }
+
 }
 
 
@@ -193,10 +202,10 @@ void twinkleMode(){
     if (!MENU_MODE)
     {
       //if acc changes AND there is no rotation
-      if (gy.getCalcs().rangeZacc>1 && gy.getCalcs().currentXYZSpeed<10)
+      if (gy.getCalcs().rangeZacc>1 && gy.getCalcs().currentXYZSpeed<15)
       { allLightsActiv = true;}
       //if spinning stops suddenly
-      if (gy.getCalcs().currentZSpeed>10){tMode_gyroCount1++;}
+      if (gy.getCalcs().currentZSpeed>30){tMode_gyroCount1++;}
       else { 
         if (tMode_gyroCount1>100){allLightsActiv = true;}
         tMode_gyroCount1 = 0; 
@@ -248,7 +257,7 @@ void timeMode(){
   for (int x=0; x<2; x++){
     timer = millis();
     updateGyro();
-    if (gy.getCalcs().currentZSpeed>20){tMode_gyroCount1++;}
+    if (gy.getCalcs().currentZSpeed>60){tMode_gyroCount1++;}
     else {tMode_gyroCount1 = 0; bMode_cycleIter=0;}
 
     //normally 120, but 30 for testing
