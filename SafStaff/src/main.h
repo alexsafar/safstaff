@@ -14,17 +14,14 @@ void initialiseLedSet();
 
 void displayGyro();
 void displayMenu();
-void displayLED();
 
 void updateGyro();
 
 void detectMenu();
-void detectOff();
 
 void timeMode();
 void rainbowMode();
 void twinkleMode();
-void blockMode();
 void centre_out_dot(uint8_t y, CRGB color, uint32_t wait, bool first) ;
 
 #define DATA_PIN    13
@@ -46,30 +43,6 @@ unsigned long timer;
 
 Gyro gy;
 
-//offmode params
-float zInOffModePrevious = 0;
-
-//time mode params
-int tMode_gyroCount1 = 0;
-int tMode_gyroCount2 = 0;
-int tMode_gyroMiss1 = 0;
-int tMode_gyroMiss2 = 0;
-int tMode_gyroActivateCount = 120;
-
-//rainbow params
-uint8_t hue = 0;
-uint8_t delta = 10;
-
-//twinklemode params
-int brightArr [NUM_LEDS] = {};
-int onOffArr [NUM_LEDS] = {};
-int colourArr [NUM_LEDS] = {};
-float lastAccZtwink = 0;
-
-//blockmode params
-uint8_t bMode_cycleIter = 0; 
-int bMode_gyroCount = 0;
-int bMode_gyroActivateCount = 20;
 
 //detect menu parameters
 bool MENU_MODE = false;
@@ -84,23 +57,13 @@ float angTol = 10;
 //menu parameters
 int MENU_OPTION = 1;
 int menuCount = 0;
-uint8_t bBrightness = 255;
 uint8_t bCount = 0;
 int bCountMax = 8;
 int confirmCount = 0;
 int confirmOption = 1;
-uint8_t confirmBrightness = 255;
 
-
-float lastGyroX = 0;
-float lastGyroY = 0;
-float lastGyroZ = 0;
 
 void resetVariables() {
-    //lastGyroZ = 0;
-    lastGyroX = mpu6050.getGyroAngleX();
-    lastGyroY = mpu6050.getGyroAngleY();
-    lastGyroZ = mpu6050.getGyroAngleZ();
     leds.fill_solid(CHSV(0,0,0));
 }
 

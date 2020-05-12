@@ -67,28 +67,18 @@ void initialiseLedSet() {
 
 ////////////////////////
 void displayMenu() {
-  //display.clear();
-  //display.drawString(10, 0, "MENU");
-
   //Spherical angle - use direction of gravity on Z
   float sphAng = fabs(gy.getTimePt().accZ  +0.05);
   if (sphAng<0.3){
-    //display.drawString(10, 30, "BLOCK");
-    //leds.fill_solid(CHSV(128,255,bBrightness));    //@@@@aqua to blue
     if (MENU_OPTION!=3){resetVariables();}
     MENU_OPTION=3;   
     }
   else if (sphAng>0.85) {
-    //display.drawString(10, 30, "RAINBOW");
-    //leds.fill_solid(CHSV(32,255,bBrightness));    //red to @@@@orange
     if (MENU_OPTION!=1){resetVariables();}
     MENU_OPTION=1;     }
   else {
-    //display.drawString(10, 30, "TWINKLE");
-    //leds.fill_solid(CHSV(244,255,bBrightness));    //purple to @@@@pink
     if (MENU_OPTION!=2){resetVariables();}
     MENU_OPTION=2;} 
-  //in the above we could go more advanced so each gradient applies centre out??
 
   //confirmation logic - flash every 8 iterations. if it stays the same for 5 flashes then break from menu
   if (bCount%bCountMax==0 && timer>16000){
@@ -177,6 +167,9 @@ void displayGyro() {
 ////////////////////////
 //fill the whole thing linearly with a ranbow
 //cycle rainbow forwards in colour
+uint8_t hue = 0;
+uint8_t delta = 10;
+
 void rainbowMode(){
   updateGyro();
   for (int x=0; x<2; x++){
@@ -190,6 +183,11 @@ void rainbowMode(){
 //turn random leds on and fade them out
 //colour based on position
 //sudden change in acceleration means all on at full brightness
+int brightArr [NUM_LEDS] = {};
+int onOffArr [NUM_LEDS] = {};
+int colourArr [NUM_LEDS] = {};
+int twMode_gyroCount1 = 0;
+
 void twinkleMode(){
   for (int x=0;x<5;x++){
     updateGyro();
@@ -202,13 +200,13 @@ void twinkleMode(){
     if (!MENU_MODE)
     {
       //if acc changes AND there is no rotation
-      if (gy.getCalcs().rangeZacc>1 && gy.getCalcs().currentXYZSpeed<15)
+      if (gy.getCalcs().rangeZacc>1 && gy.getCalcs().currentXYZSpeed<25)
       { allLightsActiv = true;}
       //if spinning stops suddenly
-      if (gy.getCalcs().currentZSpeed>30){tMode_gyroCount1++;}
+      if (gy.getCalcs().currentZSpeed>30){twMode_gyroCount1++;}
       else { 
-        if (tMode_gyroCount1>100){allLightsActiv = true;}
-        tMode_gyroCount1 = 0; 
+        if (twMode_gyroCount1>100){allLightsActiv = true;}
+        twMode_gyroCount1 = 0; 
       }
     }
 
@@ -253,20 +251,23 @@ void twinkleMode(){
 //change colour as a function of time (for the first bit so they sync)
 //then strobe colours in dragon mode (col based on time)
 //float avgSpeed = 0;
+int tMode_gyroCount1 = 0;
+uint8_t tMode_cycleIter = 0; 
+
 void timeMode(){
   for (int x=0; x<2; x++){
     timer = millis();
     updateGyro();
     if (gy.getCalcs().currentZSpeed>60){tMode_gyroCount1++;}
-    else {tMode_gyroCount1 = 0; bMode_cycleIter=0;}
+    else {tMode_gyroCount1 = 0; tMode_cycleIter=0;}
 
     //normally 120, but 30 for testing
     if (tMode_gyroCount1>120 && !MENU_MODE) {
-      int a = bMode_cycleIter%NUM_LED_IN_SET;
+      int a = tMode_cycleIter%NUM_LED_IN_SET;
       CHSV colourCycle(map(timer,0,3200,0,255),255,255);
-      if(int(floor(bMode_cycleIter/NUM_LED_IN_SET))%2==0){centre_out_dot(a, colourCycle, 100, true);}
+      if(int(floor(tMode_cycleIter/NUM_LED_IN_SET))%2==0){centre_out_dot(a, colourCycle, 100, true);}
       else {centre_out_dot(a, colourCycle, 100, false);}
-      bMode_cycleIter++;
+      tMode_cycleIter++;
       FastLED.delay(50);
       leds.fill_solid(CHSV(0,0,0));
     }
