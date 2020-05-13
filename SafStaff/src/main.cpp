@@ -1,17 +1,62 @@
 #include "main.h"
 
+////////////////////////
+// This code is for an LED contact staff 
+// 
+// It requires the hardware (in each hub):
+// Microcontroller (chip that's in control) = ESP32 (wemos lolin32 oled)
+// 3.2m of LEDs (individually addressible LED) = WS2812b (60 per m)
+// Accelerometer (detects angle and acceleration) = MPU6050
+// 2x 18650 batteries
+// 2x battery holders
+// usb charging station
+//
+// The project is made in the free software Visual Studio Code 1.35.1 on Linux (tested on Windows too)
+// PlatformIO extension must be installed (through VSCode's 'Extensions' functionality)
+// And the following libraries must be installed
+// - Arduino (may come with PlatformIO?)
+// - Wire (may come with PlatformIO?)
+// - MPU6050_tockn
+// - SSD1306Wire
+// - FastLED
+//
+// There are 5 essential files in this project:
+// main.h and main.cpp - these have the main code for running everything
+// gyr.h and gyr.cpp - these contain custom ways of storing and processing gyro data
+// platformio.ini - contains some configuration data
+//
+// This code has the general structure:
+// setup() initialises everything (when first turned on)
+// loop() is called constantly and is the main corridoor in the architecture
+// detectMenu() checks to see if we want to activate menu mode 
+// displayMenu() changes which light mode, depending on orientation (upright, horizontal, somewhere inbetween)
+//
+// rainbowMode() shows a simple cycle of colours which display over the rangle of LEDs
+// timeMode() shows a block colour accross all LEDs which changes with time
+//        - it also has a special mode when the staff rolls for a long time, calling:
+//        the centre_out_dot function which shows lights expanding from the centre of the unit outwards, then in again
+// twinkleMode() shows random LEDs activate with random colours, then fade
+//        - it also has a special mode activated when the staff suddenly moves along it's axis, or stopps spinning,
+//        where it then fills entirely with a block colour, before fading and going back to twinkle mode
+//
+// updateGyro() calls functions in gyr which store the last 10 accelerometer values
+//        - these are evaluated to produce speed and change in acceleration
+//
+////////////////////////
+
+
 
 ////////////////////////
+// Setup is called only once - when the chip first turns on
+////////////////////////
 void setup() {
-  Serial.begin(921600);
-
-  //Set up the gyro
-  Wire.begin(5,4); // tell the I2C library what pins we are using for SCL(serial clock) SDA(serial data)
-  mpu6050.begin();
-  delay(200);
-  mpu6050.calcGyroOffsets(true);
-  gy = Gyro();
-  updateGyro();
+  Serial.begin(921600); // The baud rate is set to 921600, which needs to be also set in platformio.ini (monitor_speed = 921600) if you want to use Serial monitor for debugging
+  Wire.begin(5,4); // Set what pins we are being used for the gyroscope
+  mpu6050.begin(); // initialise the gyroscope
+  delay(200); // Pause for 200 milliseconds
+  mpu6050.calcGyroOffsets(true); // Really important for the staff to NOT MOVE here, or X Y Z angles will consistantly drift
+  gy = Gyro();  // create a Gyro object, which is a custom class found in gyr.cpp and gyr.h
+  updateGyro(); // update the Gyro object to hold the current values for acceleration and angle
 
   //Set up the LEDs
   initialiseLedSet();
@@ -20,32 +65,25 @@ void setup() {
 
   //Set up the LED display
   display.init(); 
+
+  MENU_MODE = true;
+  MENU_OPTION = 3;
 }
 
 
 ////////////////////////
 void loop() {
   timer = millis();
-  if (false){
-    twinkleMode();
-    if (gy.getCalcs().rangeZacc > 1){
-      Serial.println(gy.display());
-    }
+  detectMenu();
+  if (MENU_MODE){
+    displayMenu();
   }
-  else {
-    detectMenu();
-    if (MENU_MODE){
-      displayMenu();
-    }
-    
-    displayGyro();
-    //all these menu options must loop in 100ms intervals - see within for details
-    if (MENU_OPTION==1){twinkleMode();}
-    else if (MENU_OPTION==2){timeMode();}
-    else if (MENU_OPTION==3){rainbowMode();}
-    
-  }
-
+  
+  displayGyro();
+  //all these menu options must loop in 100ms intervals - see within for details
+  if (MENU_OPTION==1){twinkleMode();}
+  else if (MENU_OPTION==2){timeMode();}
+  else if (MENU_OPTION==3){rainbowMode();}
 }
 
 
@@ -54,6 +92,8 @@ void updateGyro() {
     gy.update(mpu6050.getGyroAngleX(), mpu6050.getGyroAngleY(),mpu6050.getGyroAngleZ(),mpu6050.getAccX(),mpu6050.getAccY(),mpu6050.getAccZ());
 }
 
+////////////////////////
+//
 ////////////////////////
 void initialiseLedSet() {
   int setSize = NUM_LEDS / NUM_LED_SETS;
@@ -66,6 +106,15 @@ void initialiseLedSet() {
 }
 
 ////////////////////////
+
+
+uint8_t bCount = 0;
+int bCountMax = 8;
+int confirmCount = 0;
+int confirmOption = 1;
+int iterCount = 0;
+int switchCount = 0;
+
 void displayMenu() {
   //Spherical angle - use direction of gravity on Z
   float sphAng = fabs(gy.getTimePt().accZ  +0.05);
@@ -105,11 +154,18 @@ void displayMenu() {
   }
   bCount++;
 
-//note: need to make sure variuabkles set to base when menui activated??
   display.display();
 }
 
 ////////////////////////
+//detect menu parameters
+
+int lastZ = 0;
+bool posRotation = false;
+int requiredSwitches=12;
+int detectMenuTimeout = 40;
+float angTol = 10;
+
 void detectMenu() {
 
   if (timer <16000) {
@@ -132,7 +188,7 @@ void detectMenu() {
   //if we hit the required number of switches
   if (switchCount==requiredSwitches) {
     MENU_MODE=true; iterCount=0; switchCount = 0; //reset local variables
-    bCount = 0; confirmCount = 0; menuCount = 0;}//initiailise menu variables
+    bCount = 0; confirmCount = 0;}//initiailise menu variables
 
   //timeout menu detection if no switches detected for a while
   if (iterCount>detectMenuTimeout) {iterCount=0; switchCount = 0;}
