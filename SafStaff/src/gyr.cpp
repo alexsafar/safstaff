@@ -1,5 +1,10 @@
 #include "gyr.h"
 
+////////////////////////
+// This Gryo object stores the last 10 gyro values in an array 
+// This is so we can perform some calculations to find out whatever we want
+// Every time a new value is added in the update() function we recalculate all the values from our gyro_calcs struct, shown in gyr.h
+////////////////////////
 
 
 Gyro::Gyro() {     // Constructor
